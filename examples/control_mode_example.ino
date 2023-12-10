@@ -47,7 +47,7 @@ uint8_t MOT_CAN_ID = 0x01;
 // init cybergeardriver
 
 lkm_m5::Driver driver = lkm_m5::Driver(MASTER_CAN_ID, MOT_CAN_ID, MOTOR_SERIES_MF, ENCODER_TYPE_16_BIT);
-lkm_m5::MotorStatus motor_status;
+lkm_m5::MotorState motor_status;
 
 // init sprite for display
 TFT_eSprite sprite = TFT_eSprite(&sprite);
@@ -199,7 +199,7 @@ void loop()
 
   // update and get motor data
   if ( driver.process_can_packet() ) {
-    motor_status = driver.motor_status();
+    motor_status = driver.motor_state();
     draw_display(mode);
   }
 

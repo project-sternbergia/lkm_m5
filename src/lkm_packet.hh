@@ -120,22 +120,94 @@ namespace lkm_m5 {
     float position_;
   };
 
-  class MotorOffRequestPacket : public RequestPacket
+  class PIDResponsePacket : public ResponsePacket
   {
   public:
-    MotorOffRequestPacket() : RequestPacket(CMD_MOTOR_OFF, 8) {}
+    PIDResponsePacket(uint8_t type, const Frame& frame)
+      : ResponsePacket(type, frame)
+    {}
+
+    virtual ~PIDResponsePacket() {}
+
+    virtual bool unpack() {
+      if (!ResponsePacket::unpack()) return false;
+      angle_kp_ = frame_[2];
+      angle_ki_ = frame_[3];
+      speed_kp_ = frame_[4];
+      speed_ki_ = frame_[5];
+      iq_kp_ = frame_[6];
+      iq_ki_ = frame_[7];
+      return true;
+    }
+
+    uint8_t angle_kp() const { return angle_kp_; }
+    uint8_t angle_ki() const { return angle_ki_; }
+    uint8_t speed_kp() const { return speed_kp_; }
+    uint8_t speed_ki() const { return speed_ki_; }
+    uint8_t iq_kp() const { return iq_kp_; }
+    uint8_t iq_ki() const { return iq_ki_; }
+
+  private:
+    uint8_t angle_kp_;
+    uint8_t angle_ki_;
+    uint8_t speed_kp_;
+    uint8_t speed_ki_;
+    uint8_t iq_kp_;
+    uint8_t iq_ki_;
   };
 
-  class MotorOnRequestPacket : public RequestPacket
+  class ReadEncoderResponsePacket: public ResponsePacket
   {
   public:
-    MotorOnRequestPacket() : RequestPacket(CMD_MOTOR_ON, 8) {}
-  };
+    ReadEncoderResponsePacket(const Frame& frame, uint8_t encoder_type)
+      : ResponsePacket(CMD_READ_ENCODER, frame)
+      , encoder_type_(encoder_type)
+    {}
 
-  class MotorStopRequestPacket : public RequestPacket
-  {
-  public:
-    MotorStopRequestPacket() : RequestPacket(CMD_MOTOR_STOP, 8) {}
+    virtual ~ReadEncoderResponsePacket() {}
+
+    virtual bool unpack() {
+      if (!ResponsePacket::unpack()) return false;
+
+      uint16_t position_step;
+      std::memcpy(&position_step, frame_.data() + 2, sizeof(position_step));
+
+      uint16_t raw_position_step;
+      std::memcpy(&raw_position_step, frame_.data() + 4, sizeof(raw_position_step));
+
+      uint16_t offset;
+      std::memcpy(&offset, frame_.data() + 6, sizeof(offset));
+
+      if (encoder_type_ == ENCODER_TYPE_14_BIT) {
+        encoder_position_ = position_step / 16383.0f * 2.0f * M_PI;
+        encoder_raw_position_ = raw_position_step / 16383.0f * 2.0f * M_PI;
+        encoder_offset_ = offset / 16383.0f * 2.0f * M_PI;
+      } else if (encoder_type_ == ENCODER_TYPE_16_BIT) {
+        encoder_position_ = position_step / 32767.0f * 2.0f * M_PI;
+        encoder_raw_position_ = raw_position_step / 32767.0f * 2.0f * M_PI;
+        encoder_offset_ = offset / 32767.0f * 2.0f * M_PI;
+      } else if (encoder_type_ == ENCODER_TYPE_18_BIT) {
+        encoder_position_ = position_step / 65535.0f * 2.0f * M_PI;
+        encoder_raw_position_ = raw_position_step / 65535.0f * 2.0f * M_PI;
+        encoder_offset_ = offset / 65535.0f * 2.0f * M_PI;
+      } else {
+        // error
+        encoder_position_ = 0.0f;
+        encoder_raw_position_ = 0.0f;
+        encoder_offset_ = 0.0f;
+      }
+      return true;
+    }
+
+    float encoder_position() const { return encoder_position_; }
+    float encoder_raw_position() const { return encoder_raw_position_; }
+    float encoder_offset() const { return encoder_offset_; }
+
+  private:
+    uint8_t encoder_type_;
+    float encoder_position_;
+    float encoder_raw_position_;
+    float encoder_offset_;
   };
 
   class OpenLoopControlRequestPacket : public RequestPacket
@@ -351,12 +423,90 @@ namespace lkm_m5 {
     float speed_;
   };
 
-  class ReadPIDParameterRequestPacket: public RequestPacket
+  class WritePIDParameterToRAMRequestPacket: public RequestPacket
   {
   public:
-    ReadPIDParameterRequestPacket()
-      : RequestPacket(CMD_READ_PID_PARAMTER, 8)
+    WritePIDParameterToRAMRequestPacket(uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki)
+      : RequestPacket(CMD_WRITE_PID_PARAMTER_TO_RAM, 8)
+      , angle_kp_(angle_kp), angle_ki_(angle_ki), speed_kp_(speed_kp), speed_ki_(speed_ki), iq_kp_(iq_kp), iq_ki_(iq_ki)
     {}
+
+    virtual bool pack() {
+      if (!RequestPacket::pack()) return false;
+      frame_[2] = angle_kp_;
+      frame_[3] = angle_ki_;
+      frame_[4] = speed_kp_;
+      frame_[5] = speed_ki_;
+      frame_[6] = iq_kp_;
+      frame_[7] = iq_ki_;
+      return true;
+    }
+
+  private:
+    uint8_t angle_kp_;
+    uint8_t angle_ki_;
+    uint8_t speed_kp_;
+    uint8_t speed_ki_;
+    uint8_t iq_kp_;
+    uint8_t iq_ki_;
+  };
+
+  class WritePIDParameterToROMRequestPacket: public RequestPacket
+  {
+  public:
+    WritePIDParameterToROMRequestPacket(uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki)
+      : RequestPacket(CMD_WRITE_PID_PARAMTER_TO_ROM, 8)
+      , angle_kp_(angle_kp), angle_ki_(angle_ki), speed_kp_(speed_kp), speed_ki_(speed_ki), iq_kp_(iq_kp), iq_ki_(iq_ki)
+    {}
+
+    virtual bool pack() {
+      if (!RequestPacket::pack()) return false;
+      frame_[2] = angle_kp_;
+      frame_[3] = angle_ki_;
+      frame_[4] = speed_kp_;
+      frame_[5] = speed_ki_;
+      frame_[6] = iq_kp_;
+      frame_[7] = iq_ki_;
+      return true;
+    }
+
+  private:
+    uint8_t angle_kp_;
+    uint8_t angle_ki_;
+    uint8_t speed_kp_;
+    uint8_t speed_ki_;
+    uint8_t iq_kp_;
+    uint8_t iq_ki_;
+  };
+
+  class WriteAccerelationToRAMRequestPacket: public RequestPacket
+  {
+  public:
+    WriteAccerelationToRAMRequestPacket(float acc)
+      : RequestPacket(CMD_WRITE_ACCELERATION, 8)
+      , accerelation_(acc)
+    {}
+
+  private:
+    float accerelation_;
+  };
+
+  class WriteEncoderValueToROMAsZeroPointRequestPacket: public RequestPacket
+  {
+  public:
+    WriteEncoderValueToROMAsZeroPointRequestPacket(uint16_t encoder_offset)
+      : RequestPacket(CMD_WRITE_ACCELERATION, 8)
+      , encoder_offset_(encoder_offset)
+    {}
+
+    virtual bool pack() {
+      if (!RequestPacket::pack()) return false;
+      std::memcpy(frame_.data() + 6, &encoder_offset_, sizeof(encoder_offset_));
+      return true;
+    }
+
+  private:
+    uint16_t encoder_offset_;
   };
 }
 
