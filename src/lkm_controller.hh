@@ -21,7 +21,7 @@ namespace lkm_m5
   class Controller
   {
   public:
-    Controller();
+    explicit Controller(uint8_t master_can_id);
     virtual ~Controller();
 
     bool init(MCP_CAN* p_can, const std::vector<MotorConfig> & configs);
@@ -32,6 +32,7 @@ namespace lkm_m5
     bool process_can_packet();
 
   private:
+    uint8_t master_can_id_;
     MCP_CAN * p_can_;
     uint8_t receive_buffer_[64];  //!< receive buffer
     std::vector<MotorConfig> configs_;
