@@ -107,7 +107,7 @@ namespace lkm_m5 {
 
     // accessor
     float tempareture() const { return tempareture_; }
-    int16_t torque_current() const { return torque_current_; }
+    float torque_current() const { return torque_current_; }
     float speed() const { return speed_; }
     float position() const { return position_; }
 
