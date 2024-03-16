@@ -1,9 +1,10 @@
 #include "lkm_driver.hh"
 #include "lkm_driver_defs.hh"
-#include "lkm_packet.hh"
+#include "lkm_can_packet.hh"
 #include <Arduino.h>
 
 using namespace lkm_m5;
+using namespace lkm_m5::can;
 
 Driver::Driver(uint8_t master_can_id, uint8_t target_can_id, uint8_t motor_type, uint8_t encoder_type)
   : master_can_id_(master_can_id)
