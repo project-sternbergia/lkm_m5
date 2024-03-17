@@ -1,5 +1,5 @@
 #include "lkm_controller.hh"
-#include "lkm_driver.hh"
+#include "lkm_can_driver.hh"
 #include <memory>
 
 using namespace lkm_m5;
@@ -22,7 +22,7 @@ bool Controller::init(MCP_CAN* p_can, const std::vector<MotorConfig> & configs)
 
   for (auto config : configs)
   {
-    drivers_[config.id] = std::make_shared<Driver>(master_can_id_, config.id, config.motor_type, config.encoder_type);
+    drivers_[config.id] = std::make_shared<lkm_m5::can::Driver>(master_can_id_, config.id, config.motor_type, config.encoder_type);
     drivers_[config.id]->init(p_can_);
   }
   return true;

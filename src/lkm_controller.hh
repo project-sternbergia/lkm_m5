@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <vector>
 #include <memory>
-#include "lkm_driver.hh"
+#include "lkm_can_driver.hh"
 
 namespace lkm_m5
 {
@@ -16,7 +16,7 @@ namespace lkm_m5
     uint8_t encoder_type;
   };
 
-  typedef std::shared_ptr<Driver> DriverPtr;
+  typedef std::shared_ptr<lkm_m5::can::Driver> DriverPtr;
 
   class Controller
   {
