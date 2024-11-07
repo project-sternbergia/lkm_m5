@@ -1,25 +1,25 @@
 #include "lkm_driver.hh"
+
+#include <Arduino.h>
+
 #include "lkm_driver_defs.hh"
 #include "lkm_packet.hh"
-#include <Arduino.h>
 
 using namespace lkm_m5;
 
-Driver::Driver(uint8_t master_can_id, uint8_t target_can_id, uint8_t motor_type, uint8_t encoder_type)
-  : master_can_id_(master_can_id)
-  , target_can_id_(target_can_id)
-  , motor_type_(motor_type)
-  , encoder_type_(encoder_type)
-  , send_count_(0)
-{}
-
-Driver::~Driver()
-{}
-
-void Driver::init(MCP_CAN* p_can)
+Driver::Driver(
+  uint8_t master_can_id, uint8_t target_can_id, uint8_t motor_type, uint8_t encoder_type)
+: master_can_id_(master_can_id),
+  target_can_id_(target_can_id),
+  motor_type_(motor_type),
+  encoder_type_(encoder_type),
+  send_count_(0)
 {
-  can_ = p_can;
 }
+
+Driver::~Driver() {}
+
+void Driver::init(MCP_CAN * p_can) { can_ = p_can; }
 
 bool Driver::motor_on()
 {
@@ -112,16 +112,22 @@ bool Driver::read_pid_parameter()
   return send_motor_request(packet.frame());
 }
 
-bool Driver::write_pid_parameter_to_ram(uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki)
+bool Driver::write_pid_parameter_to_ram(
+  uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp,
+  uint8_t iq_ki)
 {
-  auto packet = WritePIDParameterToRAMRequestPacket(angle_kp, angle_ki, speed_kp, speed_ki, iq_kp, iq_ki);
+  auto packet =
+    WritePIDParameterToRAMRequestPacket(angle_kp, angle_ki, speed_kp, speed_ki, iq_kp, iq_ki);
   if (!packet.pack()) return false;
   return send_motor_request(packet.frame());
 }
 
-bool Driver::write_pid_parameter_to_rom(uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp, uint8_t iq_ki)
+bool Driver::write_pid_parameter_to_rom(
+  uint8_t angle_kp, uint8_t angle_ki, uint8_t speed_kp, uint8_t speed_ki, uint8_t iq_kp,
+  uint8_t iq_ki)
 {
-  auto packet = WritePIDParameterToROMRequestPacket(angle_kp, angle_ki, speed_kp, speed_ki, iq_kp, iq_ki);
+  auto packet =
+    WritePIDParameterToROMRequestPacket(angle_kp, angle_ki, speed_kp, speed_ki, iq_kp, iq_ki);
   if (!packet.pack()) return false;
   return send_motor_request(packet.frame());
 }
@@ -210,7 +216,7 @@ bool Driver::read_motor_state3()
   return send_motor_request(packet.frame());
 }
 
-bool Driver::send_motor_request(const Frame& packet)
+bool Driver::send_motor_request(const Frame & packet)
 {
   uint32_t id = 0x140 + target_can_id_;
   Frame send_data = packet;
@@ -237,15 +243,15 @@ bool Driver::process_can_packet()
   return true;
 }
 
-bool Driver::process_response_packet(const Frame& frame)
+bool Driver::process_response_packet(const Frame & frame)
 {
   uint8_t cmd = frame[0];
-  if (cmd == CMD_OPEN_LOOP_CONTROL || cmd == CMD_TORQUE_CLOSED_LOOP_CONTROL ||
-      cmd == CMD_SPEED_CLOSED_LOOP_CONTROL || cmd == CMD_MULTI_LOOP_ANGLE_CONTROL_1 ||
-      cmd == CMD_MULTI_LOOP_ANGLE_CONTROL_2 || cmd == CMD_SINGLE_LOOP_ANGLE_CONTROL_1 ||
-      cmd == CMD_SINGLE_LOOP_ANGLE_CONTROL_2 || cmd == CMD_INCREMENT_ANGLE_CONTROL_1 ||
-      cmd == CMD_INCREMENT_ANGLE_CONTROL_2)
-  {
+  if (
+    cmd == CMD_OPEN_LOOP_CONTROL || cmd == CMD_TORQUE_CLOSED_LOOP_CONTROL ||
+    cmd == CMD_SPEED_CLOSED_LOOP_CONTROL || cmd == CMD_MULTI_LOOP_ANGLE_CONTROL_1 ||
+    cmd == CMD_MULTI_LOOP_ANGLE_CONTROL_2 || cmd == CMD_SINGLE_LOOP_ANGLE_CONTROL_1 ||
+    cmd == CMD_SINGLE_LOOP_ANGLE_CONTROL_2 || cmd == CMD_INCREMENT_ANGLE_CONTROL_1 ||
+    cmd == CMD_INCREMENT_ANGLE_CONTROL_2) {
     MotorStateResponsePacket packet(cmd, frame, motor_type_, encoder_type_);
     if (packet.unpack()) {
       motor_state_.effort = packet.torque_current();
@@ -254,10 +260,14 @@ bool Driver::process_response_packet(const Frame& frame)
       motor_state_.tempareture = packet.tempareture();
     }
 
-  } else if (cmd == CMD_MOTOR_OFF || cmd == CMD_MOTOR_ON || cmd == CMD_MOTOR_STOP || cmd == CMD_CLEAR_MOTOR_ANGLE_LOOP) {
+  } else if (
+    cmd == CMD_MOTOR_OFF || cmd == CMD_MOTOR_ON || cmd == CMD_MOTOR_STOP ||
+    cmd == CMD_CLEAR_MOTOR_ANGLE_LOOP) {
     // DO NOTHING
 
-  } else if (cmd == CMD_READ_PID_PARAMTER || cmd == CMD_WRITE_PID_PARAMTER_TO_RAM || cmd == CMD_WRITE_PID_PARAMTER_TO_ROM) {
+  } else if (
+    cmd == CMD_READ_PID_PARAMTER || cmd == CMD_WRITE_PID_PARAMTER_TO_RAM ||
+    cmd == CMD_WRITE_PID_PARAMTER_TO_ROM) {
     PIDResponsePacket packet(cmd, frame);
     if (packet.unpack()) {
       motor_parameter_.angle_kp = packet.angle_kp();
@@ -276,23 +286,26 @@ bool Driver::process_response_packet(const Frame& frame)
       encoder_state_.offset = packet.encoder_offset();
     }
 
-  } else if (cmd == CMD_READ_ACCELERATION || cmd == CMD_WRITE_ACCELERATION ||
-            cmd == CMD_WRITE_ENCODER_VALUE_TO_ROM_AS_THE_MOTOR_ZERO_POINT || cmd == CMD_WRITE_CURRENT_POSITION_TO_RON_AS_THE_MOTOR_ZERO_POINT ||
-            cmd == CMD_READ_MULTI_ANGLE_LOOP || cmd == CMD_READ_SINGLE_ANGLE_LOOP || cmd == CMD_READ_MOTOR_STATE_1_AND_ERROR_STATE ||
-            cmd == CMD_CLEAR_MOTOR_ERROR_STATE || cmd == CMD_READ_MOTOR_STATE_2 || cmd == CMD_READ_MOTOR_STATE_3) {
+  } else if (
+    cmd == CMD_READ_ACCELERATION || cmd == CMD_WRITE_ACCELERATION ||
+    cmd == CMD_WRITE_ENCODER_VALUE_TO_ROM_AS_THE_MOTOR_ZERO_POINT ||
+    cmd == CMD_WRITE_CURRENT_POSITION_TO_RON_AS_THE_MOTOR_ZERO_POINT ||
+    cmd == CMD_READ_MULTI_ANGLE_LOOP || cmd == CMD_READ_SINGLE_ANGLE_LOOP ||
+    cmd == CMD_READ_MOTOR_STATE_1_AND_ERROR_STATE || cmd == CMD_CLEAR_MOTOR_ERROR_STATE ||
+    cmd == CMD_READ_MOTOR_STATE_2 || cmd == CMD_READ_MOTOR_STATE_3) {
     // NOT IMPLEMENTED
   }
 
   return true;
 }
 
-void Driver::print_can_packet(uint32_t id, uint8_t *data, uint8_t len)
+void Driver::print_can_packet(uint32_t id, uint8_t * data, uint8_t len)
 {
   Serial.print("Id : ");
   Serial.print(id, HEX);
 
   Serial.print(" Data : ");
-  for(byte i = 0; i<len; i++) {
+  for (byte i = 0; i < len; i++) {
     Serial.print(data[i], HEX);
     Serial.print(" ");
   }
