@@ -1,17 +1,17 @@
 #include <Arduino.h>
+#include <M5Stack.h>
 #include <math.h>
 #include <mcp_can.h>
-#include <M5Stack.h>
+
 #include "lkm_driver.hh"
 #include "lkm_driver_defs.hh"
 
-#define INC_POSITION  20.0
-#define INC_VELOCITY  0.4
-#define INC_TORQUE    0.04
+#define INC_POSITION 20.0
+#define INC_VELOCITY 0.4
+#define INC_TORQUE 0.04
 #define MODE_POSITION 0x01
-#define MODE_SPEED    0x02
-#define MODE_CURRENT  0x03
-
+#define MODE_SPEED 0x02
+#define MODE_CURRENT 0x03
 
 /**
  * @brief Init can interface
@@ -35,7 +35,6 @@ void draw_display(uint8_t mode, bool is_mode_change = false);
  */
 void get_color_and_mode_str(uint8_t mode, uint16_t & color, String & mode_str);
 
-
 // init MCP_CAN object
 #define CAN0_INT 15  // Set INT to pin 2
 MCP_CAN CAN0(12);    // Set CS to pin 10
@@ -46,22 +45,23 @@ uint8_t MOT_CAN_ID = 0x01;
 
 // init cybergeardriver
 
-lkm_m5::Driver driver = lkm_m5::Driver(MASTER_CAN_ID, MOT_CAN_ID, MOTOR_SERIES_MF, ENCODER_TYPE_16_BIT);
+lkm_m5::Driver driver =
+  lkm_m5::Driver(MASTER_CAN_ID, MOT_CAN_ID, MOTOR_SERIES_MF, ENCODER_TYPE_16_BIT);
 lkm_m5::MotorState motor_status;
 
 // init sprite for display
 TFT_eSprite sprite = TFT_eSprite(&sprite);
 
-uint8_t mode = MODE_POSITION;   //!< current mode
-float target_pos = 0.0;         //!< motor target position
-float target_vel = 0.0;         //!< motor target velocity
-float target_torque = 0.0;      //!< motor target torque
-float dir = 1.0f;               //!< direction for motion mode
-float default_kp = 50.0f;       //!< default kp for motion mode
-float default_kd = 1.0f;        //!< default kd for motion mode
-float init_speed = 30.0f;       //!< initial speed
-float slow_speed = 1.0f;        //!< slow speed
-bool state_change_flag = false; //!< state change flag
+uint8_t mode = MODE_POSITION;    //!< current mode
+float target_pos = 0.0;          //!< motor target position
+float target_vel = 0.0;          //!< motor target velocity
+float target_torque = 0.0;       //!< motor target torque
+float dir = 1.0f;                //!< direction for motion mode
+float default_kp = 50.0f;        //!< default kp for motion mode
+float default_kd = 1.0f;         //!< default kd for motion mode
+float init_speed = 30.0f;        //!< initial speed
+float slow_speed = 1.0f;         //!< slow speed
+bool state_change_flag = false;  //!< state change flag
 
 void setup()
 {
@@ -125,8 +125,7 @@ void draw_display(uint8_t mode, bool is_mode_change)
 
 void get_color_and_mode_str(uint8_t mode, uint16_t & color, String & mode_str)
 {
-  switch (mode)
-  {
+  switch (mode) {
     case MODE_POSITION:
       color = RED;
       mode_str = String("Position");
@@ -148,7 +147,7 @@ void loop()
   M5.update();
 
   // check mode change
-  if(M5.BtnB.wasPressed()) {
+  if (M5.BtnB.wasPressed()) {
     mode = (mode + 1) % MODE_CURRENT + 1;
     state_change_flag = true;
     target_pos = 0.0;
@@ -184,11 +183,9 @@ void loop()
   if (mode == MODE_POSITION) {
     // set limit speed when state changed
     driver.multi_loop_angle_with_speed_control(target_pos, slow_speed);
-  }
-  else if (mode == MODE_SPEED) {
+  } else if (mode == MODE_SPEED) {
     driver.speed_closed_loop_control(target_vel);
-  }
-  else if (mode == MODE_CURRENT) {
+  } else if (mode == MODE_CURRENT) {
     if (driver.motor_type() != MOTOR_SERIES_MS) {
       driver.torque_closed_loop_control(target_torque);
 
@@ -198,7 +195,7 @@ void loop()
   }
 
   // update and get motor data
-  if ( driver.process_can_packet() ) {
+  if (driver.process_can_packet()) {
     motor_status = driver.motor_state();
     draw_display(mode);
   }
@@ -209,11 +206,12 @@ void loop()
 void init_can()
 {
   if (CAN0.begin(MCP_ANY, CAN_1000KBPS, MCP_8MHZ) == CAN_OK) {
-      sprite.printf("MCP2515 Initialized Successfully!\n");
+    sprite.printf("MCP2515 Initialized Successfully!\n");
 
   } else {
-      sprite.printf("Error Initializing MCP2515...");
+    sprite.printf("Error Initializing MCP2515...");
   }
-  CAN0.setMode(MCP_NORMAL);  // Set operation mode to normal so the MCP2515 sends acks to received data.
+  CAN0.setMode(
+    MCP_NORMAL);  // Set operation mode to normal so the MCP2515 sends acks to received data.
   pinMode(CAN0_INT, INPUT);  // Configuring pin for /INT input
 }

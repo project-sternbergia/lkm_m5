@@ -1,28 +1,26 @@
 #include "lkm_controller.hh"
-#include "lkm_driver.hh"
+
 #include <memory>
+
+#include "lkm_driver.hh"
 
 using namespace lkm_m5;
 
-
 Controller::Controller(uint8_t master_can_id)
-  : p_can_(NULL)
-  , configs_()
-  , drivers_()
-  , master_can_id_(master_can_id)
-{}
+: p_can_(NULL), configs_(), drivers_(), master_can_id_(master_can_id)
+{
+}
 
-Controller::~Controller()
-{}
+Controller::~Controller() {}
 
-bool Controller::init(MCP_CAN* p_can, const std::vector<MotorConfig> & configs)
+bool Controller::init(MCP_CAN * p_can, const std::vector<MotorConfig> & configs)
 {
   p_can_ = p_can;
   configs_ = configs;
 
-  for (auto config : configs)
-  {
-    drivers_[config.id] = std::make_shared<Driver>(master_can_id_, config.id, config.motor_type, config.encoder_type);
+  for (auto config : configs) {
+    drivers_[config.id] =
+      std::make_shared<Driver>(master_can_id_, config.id, config.motor_type, config.encoder_type);
     drivers_[config.id]->init(p_can_);
   }
   return true;
