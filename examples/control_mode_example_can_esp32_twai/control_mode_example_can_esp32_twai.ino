@@ -3,7 +3,8 @@
 #include <math.h>
 #include <mcp_can.h>
 
-#include "lkm_driver.hh"
+#include "lkm_can_driver.hh"
+#include "lkm_can_interface_twai.hh"
 #include "lkm_driver_defs.hh"
 
 #define INC_POSITION 20.0
@@ -12,11 +13,6 @@
 #define MODE_POSITION 0x01
 #define MODE_SPEED 0x02
 #define MODE_CURRENT 0x03
-
-/**
- * @brief Init can interface
- */
-void init_can();
 
 /**
  * @brief Draw display
@@ -35,18 +31,17 @@ void draw_display(uint8_t mode, bool is_mode_change = false);
  */
 void get_color_and_mode_str(uint8_t mode, uint16_t & color, String & mode_str);
 
-// init MCP_CAN object
-#define CAN0_INT 15  // Set INT to pin 2
-MCP_CAN CAN0(12);    // Set CS to pin 10
-
 // setup master can id and motor can id (default cybergear can id is 0x7F)
 uint8_t MASTER_CAN_ID = 0x00;
 uint8_t MOT_CAN_ID = 0x01;
 
-// init cybergeardriver
+// MG series
+// lkm_m5::can::Driver driver = lkm_m5::can::Driver(MASTER_CAN_ID, MOT_CAN_ID, MOTOR_SERIES_MG, ENCODER_TYPE_18_BIT, 10);
 
-lkm_m5::Driver driver =
-  lkm_m5::Driver(MASTER_CAN_ID, MOT_CAN_ID, MOTOR_SERIES_MF, ENCODER_TYPE_16_BIT);
+// MF series
+lkm_m5::can::Driver driver =
+  lkm_m5::can::Driver(MASTER_CAN_ID, MOT_CAN_ID, MOTOR_SERIES_MF, ENCODER_TYPE_16_BIT);
+lkm_m5::can::CanInterfaceTwai interface;
 lkm_m5::MotorState motor_status;
 
 // init sprite for display
@@ -72,9 +67,8 @@ void setup()
   sprite.setTextSize(3);
   sprite.createSprite(M5.Lcd.width(), M5.Lcd.height());
 
-  // init cybergear driver
-  init_can();
-  driver.init(&CAN0);
+  interface.init(22, 21);
+  driver.init(&interface);
   driver.motor_on();
 
   // display current status
@@ -154,26 +148,20 @@ void loop()
     target_vel = 0.0;
     target_torque = 0.0;
     draw_display(mode, true);
-
   } else if (M5.BtnC.wasPressed()) {
     if (mode == MODE_POSITION) {
       target_pos += INC_POSITION / 180.0f * M_PI;
-
     } else if (mode == MODE_SPEED) {
       target_vel += INC_VELOCITY;
-
     } else if (mode == MODE_CURRENT) {
       target_torque += INC_TORQUE;
     }
     draw_display(mode);
-
   } else if (M5.BtnA.wasPressed()) {
     if (mode == MODE_POSITION) {
       target_pos -= INC_POSITION / 180.0f * M_PI;
-
     } else if (mode == MODE_SPEED) {
       target_vel -= INC_VELOCITY;
-
     } else if (mode == MODE_CURRENT) {
       target_torque -= INC_TORQUE;
     }
@@ -188,30 +176,16 @@ void loop()
   } else if (mode == MODE_CURRENT) {
     if (driver.motor_type() != MOTOR_SERIES_MS) {
       driver.torque_closed_loop_control(target_torque);
-
     } else {
       driver.open_loop_control(target_torque * 100);
     }
   }
 
   // update and get motor data
-  if (driver.process_can_packet()) {
+  while (!driver.process_packet()) {
     motor_status = driver.motor_state();
     draw_display(mode);
   }
 
   delay(200);
-}
-
-void init_can()
-{
-  if (CAN0.begin(MCP_ANY, CAN_1000KBPS, MCP_8MHZ) == CAN_OK) {
-    sprite.printf("MCP2515 Initialized Successfully!\n");
-
-  } else {
-    sprite.printf("Error Initializing MCP2515...");
-  }
-  CAN0.setMode(
-    MCP_NORMAL);  // Set operation mode to normal so the MCP2515 sends acks to received data.
-  pinMode(CAN0_INT, INPUT);  // Configuring pin for /INT input
 }

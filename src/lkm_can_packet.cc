@@ -2,6 +2,7 @@
 
 #include "lkm_can_driver_defs.hh"
 #include "lkm_driver_common.hh"
+#include "lkm_driver_defs.hh"
 
 #ifdef ARDUINO_ARCH_ESP32
 #include <M5Stack.h>
