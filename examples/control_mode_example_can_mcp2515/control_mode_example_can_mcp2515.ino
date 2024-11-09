@@ -4,9 +4,8 @@
 #include <mcp_can.h>
 
 #include "lkm_can_driver.hh"
-#include "lkm_driver_defs.hh"
-// #include "lkm_can_interface_esp32.hh"
 #include "lkm_can_interface_mcp2515.hh"
+#include "lkm_driver_defs.hh"
 
 #define INC_POSITION 20.0
 #define INC_VELOCITY 0.4
