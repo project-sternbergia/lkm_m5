@@ -1,46 +1,24 @@
-#ifndef LKM_DRIVER_HH
-#define LKM_DRIVER_HH
+#ifndef LKM_CAN_DRIVER_HH
+#define LKM_CAN_DRIVER_HH
 
 #include <sys/types.h>
 
 #include <cstdint>
 
+#include "lkm_can_interface.hh"
+#include "lkm_driver.hh"
 #include "lkm_driver_common.hh"
 
-namespace lkm_m5
+namespace lkm_m5::can
 {
-struct MotorState
-{
-  uint64_t stamp;
-  float tempareture;
-  float position;
-  float velocity;
-  float effort;
-};
-
-struct MotorParameter
-{
-  uint8_t angle_kp;
-  uint8_t angle_ki;
-  uint8_t speed_kp;
-  uint8_t speed_ki;
-  uint8_t iq_kp;
-  uint8_t iq_ki;
-};
-
-struct EncoderState
-{
-  float position;
-  float raw_position;
-  float offset;
-};
-
-class Driver
+class Driver : public lkm_m5::Driver
 {
 public:
-  Driver(uint8_t host_id, uint8_t target_id, uint8_t motor_type, uint8_t encoder_type);
+  Driver(
+    uint8_t host_id, uint8_t target_id, uint8_t motor_type, uint8_t encoder_type,
+    uint16_t wait_response_time_usec = 0);
   virtual ~Driver();
-  void init();
+  void init(CanInterface * p_can);
   virtual bool motor_on();
   virtual bool motor_off();
   virtual bool stop_motor();
@@ -75,25 +53,16 @@ public:
   virtual bool process_packet();
   virtual bool process_response_packet(const Frame & frame);
 
-  uint8_t motor_type() const { return motor_type_; }
-  uint8_t encoder_type() const { return encoder_type_; }
-  uint8_t host_id() const { return host_id_; }
-  uint8_t target_id() const { return target_id_; }
-  const MotorState & motor_state() const { return motor_state_; }
-  const MotorParameter & motor_parameter() const { return motor_parameter_; }
-  const EncoderState & encoder_state() const { return encoder_state_; }
-
 protected:
-  MotorState motor_state_;
-  MotorParameter motor_parameter_;
-  EncoderState encoder_state_;
+  bool send_motor_request(const Frame & packet);
+  void print_can_packet(uint32_t id, uint8_t * data, uint8_t len);
 
 private:
-  uint8_t host_id_;    //!< host id
-  uint8_t target_id_;  //!< target id
-  uint8_t motor_type_;
-  uint8_t encoder_type_;
+  CanInterface * can_;                //!< can connection instance
+  uint8_t receive_buffer_[64];        //!< receive buffer
+  uint16_t wait_response_time_usec_;  //!< wait time after send command
+  unsigned long send_count_;
 };
-};  // namespace lkm_m5
+};  // namespace lkm_m5::can
 
-#endif  // !LKM_DRIVER_HH
+#endif  // !LKM_CAN_DRIVER_HH

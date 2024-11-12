@@ -2,7 +2,7 @@
 
 #include <memory>
 
-#include "lkm_driver.hh"
+#include "lkm_can_driver.hh"
 
 using namespace lkm_m5;
 
@@ -13,14 +13,16 @@ Controller::Controller(uint8_t master_can_id)
 
 Controller::~Controller() {}
 
-bool Controller::init(MCP_CAN * p_can, const std::vector<MotorConfig> & configs)
+bool Controller::init(
+  can::CanInterface * p_can, const std::vector<MotorConfig> & configs,
+  uint16_t wait_response_time_usec)
 {
   p_can_ = p_can;
   configs_ = configs;
 
   for (auto config : configs) {
-    drivers_[config.id] =
-      std::make_shared<Driver>(master_can_id_, config.id, config.motor_type, config.encoder_type);
+    drivers_[config.id] = std::make_shared<lkm_m5::can::Driver>(
+      master_can_id_, config.id, config.motor_type, config.encoder_type, wait_response_time_usec);
     drivers_[config.id]->init(p_can_);
   }
   return true;
@@ -59,24 +61,18 @@ DriverPtr Controller::driver(uint8_t id)
   return drivers_[id];
 }
 
-bool Controller::process_can_packet()
+bool Controller::process_packet()
 {
-  if (p_can_->checkReceive() != CAN_MSGAVAIL) {
-    return false;
-  }
-
-  while (p_can_->checkReceive() == CAN_MSGAVAIL) {
+  while (p_can_->available()) {
     // receive data
-    unsigned long id;
-    uint8_t len;
-    p_can_->readMsgBuf(&id, &len, receive_buffer_);
+    can::CanPacket packet;
+    p_can_->read(packet);
 
     // parse packet --------------
-    Frame frame(receive_buffer_, receive_buffer_ + len);
-    uint8_t mot_id = static_cast<uint8_t>(id - 0x0140);
+    uint8_t mot_id = static_cast<uint8_t>(packet.rx_id - 0x0140);
 
     if (drivers_.find(mot_id) != drivers_.end()) {
-      drivers_[mot_id]->process_response_packet(frame);
+      drivers_[mot_id]->process_response_packet(packet.data);
     }
   }
   return true;
