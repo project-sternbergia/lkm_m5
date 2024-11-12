@@ -31,12 +31,9 @@ void draw_display(uint8_t mode, bool is_mode_change = false);
  */
 void get_color_and_mode_str(uint8_t mode, uint16_t & color, String & mode_str);
 
-// setup master can id and motor can id (default cybergear can id is 0x7F)
+// setup master can id and motor can id
 uint8_t MASTER_CAN_ID = 0x00;
 uint8_t MOT_CAN_ID = 0x01;
-
-// MG series
-// lkm_m5::can::Driver driver = lkm_m5::can::Driver(MASTER_CAN_ID, MOT_CAN_ID, MOTOR_SERIES_MG, ENCODER_TYPE_18_BIT, 10);
 
 // MF series
 lkm_m5::can::Driver driver =

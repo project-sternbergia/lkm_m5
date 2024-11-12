@@ -39,11 +39,9 @@ void get_color_and_mode_str(uint8_t mode, uint16_t & color, String & mode_str);
 #define CAN0_INT 15  // Set INT to pin 2
 MCP_CAN CAN0(12);    // Set CS to pin 10
 
-// setup master can id and motor can id (default cybergear can id is 0x7F)
+// setup master can id and motor can id
 uint8_t MASTER_CAN_ID = 0x00;
 uint8_t MOT_CAN_ID = 0x01;
-
-// init cybergeardriver
 
 lkm_m5::rs485::Driver driver =
   lkm_m5::rs485::Driver(MASTER_CAN_ID, MOT_CAN_ID, MOTOR_SERIES_MF, ENCODER_TYPE_18_BIT);
